@@ -1,0 +1,19 @@
+近年来，哲学系积极推动学科交叉发展，成立了多向度心灵与智能跨学科研究创新团队等一批面向交叉前沿的平台与团队。近期，中山大学哲学系、逻辑与认知研究所王宗顺博士后与沈榆平教授合作的成果《Convergent Semantics for Weighted Bipolar Argumentation》被人工智能国际学术会议AAAI 2026接收为(ORAL)论文并作现场报告。
+会议信息
+国际先进人工智能协会年会（AAAI Conference on Artificial Intelligence，简称AAAI）是人工智能领域历史最悠久、最具影响力的国际学术会议之一，也是中国计算机学会（CCF）推荐的A类学术会议，在全球人工智能学术界和工业界享有盛誉。会议涵盖人工智能的广泛方向，包括机器学习、知识表示与推理、自然语言处理、计算机视觉等议题。
+论文简介
+形式论辩是人工智能中用于处理复杂情境的非单调推理模型，现已成为知识表示与推理的重要范式。加权双极论辩框架是该领域内最具代表性的工作之一。在该框架中，多主体论证场景被刻画成带权有向图，论证点之间的边可表示支持或攻击关系。由于全面的表达能力，该框架被广泛应用于互动推理、信息决策以及可解释性人工智能等场景。然而，由于交互关系的复杂性，尤其是在含圈结构的论证图中，如何定义合理收敛的推理语义，成为该领域中一个长期开放问题。针对此问题，本文提出利用论证的接受度与拒绝度分别刻画论证间的支持与攻击关系，进而定义了一类新的推理语义，并从理论上证明其在任意加权双极论辩框架中均能稳定收敛。实验结果表明，该语义在计算效率方面具有良好表现。本工作为形式论辩领域的理论与实践提供了一种重要基础。
+Abstract:
+Establishing convergent semantics for weighted argumentation graphs is a long-standing fundamental issue. Particularly, it is challenging to develop convergent semantics for weighted bipolar argumentation graphs (wBAG), which include both support and attack relations on weighted arguments. Existing semantics in the literature are not general enough in the sense that they only apply to acyclic graphs or special cyclic cases. In this paper, we provide an elegant solution to this issue by adopting the so-called bilateral gradual semantics, so that the strength of arguments can be defined as the limits of iterative functions that always converge for any wBAG including cyclic ones. A preliminary experimental analysis shows that our semantics appear quite efficient in calculating argument strength. Overall, this paper offers a solid and promising foundation for weighted bipolar argumentation in theoretical and practical aspects.
+论文原文：
+https://doi.org/10.1609/aaai.v40i23.39019
+现场报告：
+https://underline.io/lecture/140744-convergent-semantics-for-weighted-bipolar-argumentation
+作者信息
+王宗顺（第一作者），中山大学哲学系、逻辑与认知研究所博士后，研究方向为形式论辩、知识表示与推理，研究成果发表于AAAI、Journal of Logic and Computation、CLAR等人工智能与逻辑学重要会议及期刊，曾获“2025年中山大学优秀博士学位论文”等奖励。
+沈榆平（通讯作者），中山大学哲学系、逻辑与认知研究所教授，研究方向为逻辑与计算、知识表示与推理，代表成果发表于ACM Transactions on Computational Logic、AAAI、KR等人工智能与逻辑学重要会议及期刊。
+排版：李依晴
+一读：章渝笳
+初审：刘瑞淇
+审核：谢裕伟
+审定发布：王丽霞
