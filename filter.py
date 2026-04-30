@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import time
+import random
 import json
 import utils
 import get_article_list
@@ -123,8 +124,8 @@ for i, article in enumerate(all_articles):
     else:
         print(f"  ⏭️ 跳过（AI 判断失败）")
 
-    # 请求间隔，避免被限流
-    time.sleep(1)
+    # 请求间隔，模拟人类阅读行为，避免被限流
+    time.sleep(random.uniform(1.5, 4.0))
     print()
 
 # ========== 输出结果 ==========
@@ -135,5 +136,5 @@ print("=" * 60)
 for article in foreign_affairs_articles:
     print(f"  [{article['date']}] {article['account']}")
     print(f"  {article['title']}")
-    print(f"  {article['url']}")
+    # print(f"  {article['url']}")
     print()
