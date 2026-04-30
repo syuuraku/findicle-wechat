@@ -1,15 +1,16 @@
 import requests
+import utils
 from bs4 import BeautifulSoup
 import time
 import random
 import json
-import utils
 import get_article_list
 from config import DEEPSEEK_API_KEY
 
 current_headers = utils.get_headers()
 
-# 从 get_article_list.py 中获取全量文章列表
+# 从 get_article_list.py 中获取全量文章列表（显式调用）
+get_article_list.fetch_articles()
 all_articles = get_article_list.all_articles
 
 
