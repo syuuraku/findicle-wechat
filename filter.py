@@ -34,7 +34,7 @@ def extract_article_text(url, headers):
         return plain_text[:800]
 
     except Exception as e:
-        print(f"  ⚠️ 抓取异常: {e}")
+        print(f"  ⚠️ 抓取异常 [{url}]: {e}")
         return None
 
 
@@ -69,7 +69,8 @@ def judge_foreign_affairs(title, text):
                     {"role": "system", "content": "你是一个文章主题分类助手，只返回JSON格式的判断结果。"},
                     {"role": "user", "content": prompt}
                 ],
-                "temperature": 0.1
+                "response_format": {"type": "json_object"}, # <--- 开启 JSON 模式
+                "temperature": 0.3
             },
             timeout=30
         )
@@ -79,8 +80,6 @@ def judge_foreign_affairs(title, text):
             return None
 
         result_text = response.json()['choices'][0]['message']['content'].strip()
-        # 去除可能的 markdown 代码块标记
-        result_text = result_text.replace('```json', '').replace('```', '').strip()
         result = json.loads(result_text)
         return result
 
