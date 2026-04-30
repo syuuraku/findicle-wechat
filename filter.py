@@ -16,7 +16,7 @@ all_articles = get_article_list.all_articles
 def extract_article_text(url, headers):
     """抓取微信文章页面，提取正文纯文本（前800字）"""
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(f'https://down.mptext.top/api/public/v1/download?url={url}', headers=headers, timeout=15)
         response.encoding = 'utf-8'
 
         if response.status_code != 200:

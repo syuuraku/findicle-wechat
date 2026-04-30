@@ -42,25 +42,4 @@ for account in account_list:
         print(f"提取【{current_nickname}】失败，状态码: {list_response.status_code}")
 
 print(f"\n共提取到 {len(all_articles)} 篇文章")
-
-# 获取公众号【外事】文章列表
-
-
-
-# if __name__ == "__main__":
-#     # 使用示例
-#     import requests
-    
-#     url = "https://mp.weixin.qq.com/" # 替换为你需要爬取的URL
-#     try:
-#         current_headers = get_headers()
-#         print(f"正在使用 User-Agent: {current_headers['User-Agent']}")
-        
-#         response = requests.get(url, headers=current_headers, timeout=10)
-#         response.raise_for_status()
-        
-#         print(f"请求成功！状态码: {response.status_code}")
-#         # print(response.text[:200]) # 打印前200个字符
-#     except Exception as e:
-#         print(f"请求失败: {e}")
-
+print()

@@ -2,4 +2,4 @@
 X_AUTH_KEY = "2bcbfc3f37c1482d9a7937cdf56e66c1"
 
 # DeepSeek API 配置
-DEEPSEEK_API_KEY = "your_deepseek_api_key_here"
+DEEPSEEK_API_KEY = "sk-711c4951f00c4ae3854dc6acc656ba88"

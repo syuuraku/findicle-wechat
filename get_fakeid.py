@@ -26,16 +26,5 @@ for piece in piece_url:
         print(f"提取{piece}失败，状态码：{piece_response.status_code}")
 
 print(f"\n共添加{len(account_list)}个公众号")
+print()
 
-# # 测试请求接口
-# piece_url = 'https://down.mptext.top/api/public/v1/accountbyurl?url=https://mp.weixin.qq.com/s/MnEBLlFtfLtgziRAf5hzUA'
-
-# response = requests.get(piece_url, headers=current_headers, timeout=10)
-# result = response.status_code
-
-# if result == 200:
-#     piece_data = response.json().get('list', [])
-#     account_list.append({"nickname": piece_data.get('nickname'), "fakeid": piece_data.get('fakeid')})
-#     print(f"添加成功：{piece_data.get('nickname')}")
-# else:
-#     print(f"提取{piece_url}失败，状态码：{result}")
