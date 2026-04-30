@@ -15,6 +15,9 @@ def fetch_articles():
     # 先获取公众号列表（调用 get_fakeid 的函数）
     get_fakeid.fetch_fakeids()
     account_list = get_fakeid.account_list
+    
+    # 用于按 URL 去重
+    seen_urls = set()  
 
     for account in account_list:
         current_fakeid = account['fakeid']
@@ -34,6 +37,11 @@ def fetch_articles():
                 timestamp = item.get('create_time')
                 date = datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d')
 
+                if url in seen_urls:
+                    print(f"  [跳过重复] {title}")
+                    continue
+
+                seen_urls.add(url)
                 all_articles.append({
                     'account': current_nickname,
                     'title': title,
@@ -45,7 +53,7 @@ def fetch_articles():
         else:
             print(f"提取【{current_nickname}】失败，状态码: {list_response.status_code}")
 
-    print(f"\n共提取到 {len(all_articles)} 篇文章")
+    print(f"\n共提取到 {len(all_articles)} 篇文章（已去重）")
     print()
     return all_articles
 
