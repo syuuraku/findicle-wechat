@@ -9,9 +9,8 @@ from config import DEEPSEEK_API_KEY
 
 current_headers = utils.get_headers()
 
-# 从 get_article_list.py 中获取全量文章列表（显式调用）
-get_article_list.fetch_articles()
-all_articles = get_article_list.all_articles
+# 从本地文件按日期区间获取文章列表（不触发爬取）
+all_articles = get_article_list.get_articles_by_date("2025-04-01", "2025-04-30")
 
 
 def extract_article_text(url, headers):

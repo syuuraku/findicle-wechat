@@ -1,24 +1,46 @@
 import requests
 import utils
+import json
+import os
 from datetime import datetime
 import get_fakeid
 
-# 获取公众号【全部】文章列表
-all_articles = []
+# 持久化文件路径
+ARTICLES_FILE = "articles.json"
+
+
+def load_articles():
+    """从本地 JSON 文件加载已有文章列表"""
+    if os.path.exists(ARTICLES_FILE):
+        with open(ARTICLES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+
+def save_articles(articles):
+    """将文章列表保存到本地 JSON 文件"""
+    with open(ARTICLES_FILE, 'w', encoding='utf-8') as f:
+        json.dump(articles, f, ensure_ascii=False, indent=2)
 
 
 def fetch_articles():
-    """获取所有公众号的文章列表，结果存入 all_articles"""
-    # 如果需要手动更新 key，可以在这里传入，或者直接修改 config.py
-    current_headers = utils.get_headers()
+    """获取所有公众号的文章列表，与历史数据合并后存入 all_articles 并持久化"""
 
-    # 先获取公众号列表（调用 get_fakeid 的函数）
+    # 1. 加载历史数据
+    all_articles = load_articles()
+    old_count = len(all_articles)
+    print(f"从本地加载了 {old_count} 篇历史文章")
+
+    # 2. 从历史数据构建去重集合
+    seen_urls = {article['url'] for article in all_articles}
+
+    # 3. 获取请求头和公众号列表
+    current_headers = utils.get_headers()
     get_fakeid.fetch_fakeids()
     account_list = get_fakeid.account_list
-    
-    # 用于按 URL 去重
-    seen_urls = set()  
 
+    # 4. 爬取各公众号的文章
+    new_count = 0
     for account in account_list:
         current_fakeid = account['fakeid']
         current_nickname = account['nickname']
@@ -48,14 +70,37 @@ def fetch_articles():
                     'url': url,
                     'date': date
                 })
+                new_count += 1
                 print(f"  [+] {title} ({date})")
 
         else:
             print(f"提取【{current_nickname}】失败，状态码: {list_response.status_code}")
 
-    print(f"\n共提取到 {len(all_articles)} 篇文章（已去重）")
+    # 5. 按日期排序
+    all_articles.sort(key=lambda x: x['date'])
+
+    # 6. 持久化保存
+    save_articles(all_articles)
+
+    print(f"\n本次新增 {new_count} 篇，总计 {len(all_articles)} 篇文章（已去重、已排序、已保存）")
     print()
     return all_articles
+
+
+def get_articles_by_date(start_date, end_date):
+    """根据日期区间从本地文件提取文章（不触发爬取）
+
+    Args:
+        start_date: 起始日期字符串，如 "2025-04-01"
+        end_date:   结束日期字符串，如 "2025-04-30"
+
+    Returns:
+        符合日期区间的文章列表（闭区间 [start_date, end_date]）
+    """
+    articles = load_articles()
+    filtered = [a for a in articles if start_date <= a['date'] <= end_date]
+    print(f"从本地 {len(articles)} 篇文章中筛选出 {len(filtered)} 篇（{start_date} ~ {end_date}）")
+    return filtered
 
 
 if __name__ == "__main__":
