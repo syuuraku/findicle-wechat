@@ -24,15 +24,13 @@ def save_articles(articles):
 
 
 def fetch_articles():
-    print("=" * 60)
-    print(" " * 20 + "开始获取文章列表")
-    print("=" * 60)
-    print()
+
     """获取所有公众号的文章列表，与历史数据合并后存入 all_articles 并持久化"""
 
     # 1. 加载历史数据
     all_articles = load_articles()
     old_count = len(all_articles)
+    print()
     print(f"从本地加载了 {old_count} 篇历史文章")
     print()
 
@@ -47,11 +45,18 @@ def fetch_articles():
         print("未获取到任何公众号信息，请检查 urls.txt 或 accounts.json")
         return all_articles
 
+    print("=" * 60)
+    print(" " * 20 + "开始获取文章列表")
+    print("=" * 60)
+    print()
+
     # 4. 爬取各公众号的文章
     new_count = 0
     for account in account_list:
         current_fakeid = account['fakeid']
         current_nickname = account['nickname']
+        
+        print()
         print(f"准备爬取公众号：{current_nickname}")
 
         list_url = f'https://down.mptext.top/api/public/v1/article?fakeid={current_fakeid}&begin=0&size=20'
@@ -85,7 +90,7 @@ def fetch_articles():
             print(f"提取【{current_nickname}】失败，状态码: {list_response.status_code}")
 
     # 5. 按日期排序
-    all_articles.sort(key=lambda x: x['date'])
+    all_articles.sort(key=lambda x: (x['account'], x['date']))
 
     # 6. 持久化保存
     save_articles(all_articles)
