@@ -24,20 +24,28 @@ def save_articles(articles):
 
 
 def fetch_articles():
+    print("=" * 60)
+    print(" " * 20 + "开始获取文章列表")
+    print("=" * 60)
+    print()
     """获取所有公众号的文章列表，与历史数据合并后存入 all_articles 并持久化"""
 
     # 1. 加载历史数据
     all_articles = load_articles()
     old_count = len(all_articles)
     print(f"从本地加载了 {old_count} 篇历史文章")
+    print()
 
     # 2. 从历史数据构建去重集合
     seen_urls = {article['url'] for article in all_articles}
 
     # 3. 获取请求头和公众号列表
     current_headers = utils.get_headers()
-    get_fakeid.fetch_fakeids()
-    account_list = get_fakeid.account_list
+    account_list = get_fakeid.fetch_fakeids()
+    
+    if not account_list:
+        print("未获取到任何公众号信息，请检查 urls.txt 或 accounts.json")
+        return all_articles
 
     # 4. 爬取各公众号的文章
     new_count = 0
@@ -71,7 +79,7 @@ def fetch_articles():
                     'date': date
                 })
                 new_count += 1
-                print(f"  [+] {title} ({date})")
+                print(f"  [+] ({date}) {title} ")
 
         else:
             print(f"提取【{current_nickname}】失败，状态码: {list_response.status_code}")
