@@ -4,13 +4,47 @@ from bs4 import BeautifulSoup
 import time
 import random
 import json
-import get_article_list
+import os
 from config import DEEPSEEK_API_KEY
 
 current_headers = utils.get_headers()
 
+ARTICLES_FILE = "articles.json"
+
+def load_articles():
+    """从本地 JSON 文件加载已有文章列表"""
+    if os.path.exists(ARTICLES_FILE):
+        with open(ARTICLES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+
+def get_articles_by_date(start_date, end_date):
+    """根据日期区间从本地文件提取文章（不触发爬取）
+
+    Args:
+        start_date: 起始日期字符串，如 "2025-04-01"
+        end_date:   结束日期字符串，如 "2025-04-30"
+
+    Returns:
+        符合日期区间的文章列表（闭区间 [start_date, end_date]）
+    """
+    articles = load_articles()
+    filtered = [a for a in articles if start_date <= a['date'] <= end_date]
+    print(f"从本地 {len(articles)} 篇文章中筛选出 {len(filtered)} 篇（{start_date} ~ {end_date}）")
+    return filtered
+
+
 # 从本地文件按日期区间获取文章列表（不触发爬取）
-all_articles = get_article_list.get_articles_by_date("2025-04-01", "2025-04-30")
+print()
+print("=" * 60)
+print("开始日期筛选")
+print("=" * 60)
+print()
+
+start_date = "2026-04-01"
+end_date = "2026-04-30"
+dated_articles = get_articles_by_date(start_date, end_date)
 
 
 def extract_article_text(url, headers):
@@ -90,16 +124,20 @@ def judge_foreign_affairs(title, text):
 
 # ========== 主流程：筛选外事文章 ==========
 foreign_affairs_articles = []
+print()
+print("=" * 60)
+print("开始主题筛选")
+print("=" * 60)
 
-print(f"\n共 {len(all_articles)} 篇文章待筛选\n")
+print(f"\n共 {len(dated_articles)} 篇文章待筛选\n")
 
-for i, article in enumerate(all_articles):
+for i, article in enumerate(dated_articles):
     title = article['title']
     url = article['url']
     account = article['account']
     date = article['date']
 
-    print(f"[{i+1}/{len(all_articles)}] 正在处理: {title}")
+    print(f"[{i+1}/{len(dated_articles)}] 正在处理: {title}")
 
     # 第一步：抓取文章正文
     text = extract_article_text(url, current_headers)

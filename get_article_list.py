@@ -100,21 +100,6 @@ def fetch_articles():
     return all_articles
 
 
-def get_articles_by_date(start_date, end_date):
-    """根据日期区间从本地文件提取文章（不触发爬取）
-
-    Args:
-        start_date: 起始日期字符串，如 "2025-04-01"
-        end_date:   结束日期字符串，如 "2025-04-30"
-
-    Returns:
-        符合日期区间的文章列表（闭区间 [start_date, end_date]）
-    """
-    articles = load_articles()
-    filtered = [a for a in articles if start_date <= a['date'] <= end_date]
-    print(f"从本地 {len(articles)} 篇文章中筛选出 {len(filtered)} 篇（{start_date} ~ {end_date}）")
-    return filtered
-
 
 if __name__ == "__main__":
     fetch_articles()
