@@ -4,6 +4,7 @@ import json
 import os
 from datetime import datetime
 import get_fakeid
+import date_range
 
 # 持久化文件路径
 ARTICLES_FILE = "articles.json"
@@ -66,6 +67,7 @@ def fetch_articles():
 
         if list_response.status_code == 200 and list_data:
             print(f"--- 正在提取【{current_nickname}】的文章 ---")
+            account_new_articles = []  # 记录该公众号本次新增的文章
             for item in list_data:
                 title = item.get('title')
                 url = item.get('link')
@@ -77,14 +79,19 @@ def fetch_articles():
                     continue
 
                 seen_urls.add(url)
-                all_articles.append({
+                new_article = {
                     'account': current_nickname,
                     'title': title,
                     'url': url,
                     'date': date
-                })
+                }
+                all_articles.append(new_article)
+                account_new_articles.append(new_article)
                 new_count += 1
                 print(f"  [+] ({date}) {title} ")
+
+            # 显示该公众号此次爬取的日期区间
+            date_range.show_date_range(current_nickname, account_new_articles)
 
         else:
             print(f"提取【{current_nickname}】失败，状态码: {list_response.status_code}")

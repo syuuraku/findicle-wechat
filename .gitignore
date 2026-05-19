@@ -2,3 +2,4 @@ __pycache__/
 articles.json
 accounts.json
 urls.txt
+config.py
