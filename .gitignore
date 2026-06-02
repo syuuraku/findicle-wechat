@@ -1,5 +1,5 @@
 __pycache__/
 articles.json
 accounts.json
-urls.txt
+*.txt
 config.py

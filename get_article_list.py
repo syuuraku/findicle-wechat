@@ -14,7 +14,10 @@ def load_articles():
     """从本地 JSON 文件加载已有文章列表"""
     if os.path.exists(ARTICLES_FILE):
         with open(ARTICLES_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            content = f.read().strip()
+            if not content:
+                return []
+            return json.loads(content)
     return []
 
 
@@ -46,13 +49,18 @@ def fetch_articles():
         print("未获取到任何公众号信息，请检查 urls.txt 或 accounts.json")
         return all_articles
 
+    # 4. 输入目标月份（用于最终汇总分组）
+    target_year_month = input("请输入目标年月（格式 YYYY-MM，如 2026-05）：").strip()
+
+    print()
     print("=" * 60)
     print(" " * 20 + "开始获取文章列表")
     print("=" * 60)
     print()
 
-    # 4. 爬取各公众号的文章
+    # 5. 爬取各公众号的文章
     new_count = 0
+    all_account_ranges = []  # 收集所有公众号的日期信息
     for account in account_list:
         current_fakeid = account['fakeid']
         current_nickname = account['nickname']
@@ -93,14 +101,27 @@ def fetch_articles():
             # 显示该公众号此次爬取的日期区间
             date_range.show_date_range(current_nickname, account_new_articles)
 
+            # 收集该公众号的日期区间信息用于最终汇总
+            if account_new_articles:
+                dates = [a['date'] for a in account_new_articles]
+                all_account_ranges.append({
+                    'nickname': current_nickname,
+                    'earliest': min(dates),
+                    'latest': max(dates),
+                    'count': len(account_new_articles),
+                })
+
         else:
             print(f"提取【{current_nickname}】失败，状态码: {list_response.status_code}")
 
-    # 5. 按日期排序
+    # 6. 按日期排序
     all_articles.sort(key=lambda x: (x['account'], x['date']))
 
-    # 6. 持久化保存
+    # 7. 持久化保存
     save_articles(all_articles)
+
+    # 8. 显示全部公众号日期汇总
+    date_range.show_summary(all_account_ranges, target_year_month)
 
     print(f"\n本次新增 {new_count} 篇，总计 {len(all_articles)} 篇文章（已去重、已排序、已保存）")
     print()
