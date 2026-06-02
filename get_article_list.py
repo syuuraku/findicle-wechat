@@ -43,7 +43,7 @@ def fetch_articles():
 
     # 3. 获取请求头和公众号列表
     current_headers = utils.get_headers()
-    account_list = get_fakeid.fetch_fakeids()
+    account_list = get_fakeid.load_accounts()
     
     if not account_list:
         print("未获取到任何公众号信息，请检查 urls.txt 或 accounts.json")

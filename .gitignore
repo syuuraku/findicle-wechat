@@ -1,5 +1,4 @@
 __pycache__/
-articles.json
-accounts.json
+*.json
 *.txt
 config.py
