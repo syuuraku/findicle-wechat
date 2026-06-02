@@ -175,3 +175,8 @@ for article in foreign_affairs_articles:
     print(f"  {article['title']}")
     # print(f"  {article['url']}")
     print()
+
+# 保存筛选结果到本地临时文件（"w" 模式会先清空再写入，已被 .gitignore 忽略）
+with open("filter_result.json", "w", encoding="utf-8") as f:
+    json.dump(foreign_affairs_articles, f, ensure_ascii=False, indent=2)
+print(f"结果已保存到 filter_result.json（共 {len(foreign_affairs_articles)} 篇）")
