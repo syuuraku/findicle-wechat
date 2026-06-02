@@ -69,6 +69,41 @@ def show_date_range(nickname, articles):
     print(f"【{nickname}】此次爬取到 {len(articles)} 篇文章，日期区间：{earliest} ~ {latest}")
 
 
+def show_summary(all_account_ranges, target_year_month):
+    """爬取结束后汇总显示所有公众号的日期区间，按是否从目标月份第一天开始分组"""
+    if not all_account_ranges:
+        print("\n本次未爬取到任何新文章，无日期汇总。")
+        return
+
+    first_day_str = f"{target_year_month}-01"
+
+    from_first_day = []
+    not_from_first_day = []
+
+    for info in all_account_ranges:
+        if info['earliest'] <= first_day_str:
+            from_first_day.append(info)
+        else:
+            not_from_first_day.append(info)
+
+    print()
+    print("=" * 60)
+    print(f"      全部公众号爬取日期汇总（目标月份：{target_year_month}）")
+    print("=" * 60)
+
+    if from_first_day:
+        print(f"\n  ✅ 从 {target_year_month} 第一天开始爬取（{len(from_first_day)} 个）：")
+        for info in from_first_day:
+            print(f"    【{info['nickname']}】{info['count']} 篇，{info['earliest']} ~ {info['latest']}")
+
+    if not_from_first_day:
+        print(f"\n  ⚠️ 未从 {target_year_month} 第一天开始爬取（{len(not_from_first_day)} 个）：")
+        for info in not_from_first_day:
+            print(f"    【{info['nickname']}】{info['count']} 篇，{info['earliest']} ~ {info['latest']}")
+
+    print()
+
+
 def save_json(filepath, data):
     """将数据保存为 JSON 文件"""
     with open(filepath, 'w', encoding='utf-8') as f:
@@ -130,7 +165,9 @@ def fetch_articles_by_fakeid(account):
     根据公众号信息爬取历史文章列表。
     爬取完成后保存到 demo_article.json。
     参数: account - dict {'nickname': ..., 'fakeid': ...}
-    返回: list of article dicts
+    返回: (article_list, account_range_info)
+        article_list: list of article dicts
+        account_range_info: dict with nickname/earliest/latest/count, or None
     """
     fakeid = account['fakeid']
     nickname = account['nickname']
@@ -171,18 +208,27 @@ def fetch_articles_by_fakeid(account):
             print()
             show_date_range(nickname, article_list)
 
+            # 收集日期区间信息用于汇总
+            dates = [a['date'] for a in article_list]
+            range_info = {
+                'nickname': nickname,
+                'earliest': min(dates),
+                'latest': max(dates),
+                'count': len(article_list),
+            }
+
             # 保存到 demo_article.json
             save_json(DEMO_ARTICLE_FILE, article_list)
 
-            return article_list
+            return article_list, range_info
         else:
             print(f"  [✗] 提取失败，状态码: {response.status_code}")
             print(f"  [✗] 响应内容: {response.text[:200]}")
-            return []
+            return [], None
 
     except Exception as e:
         print(f"  [✗] 请求异常: {e}")
-        return []
+        return [], None
 
 
 # ============================================================
@@ -201,6 +247,9 @@ def main():
             print(f"  或者: 修改脚本中的 TEST_URL 变量")
             sys.exit(1)
 
+    # 输入目标月份（用于最终汇总分组）
+    target_year_month = input("请输入目标年月（格式 YYYY-MM，如 2026-05）：").strip()
+
     # Step 1: 获取 fakeid 并保存到 demo_account.json
     account = get_fakeid_from_url(article_url)
     if not account:
@@ -208,7 +257,11 @@ def main():
         sys.exit(1)
 
     # Step 2: 爬取文章列表并保存到 demo_article.json
-    articles = fetch_articles_by_fakeid(account)
+    articles, range_info = fetch_articles_by_fakeid(account)
+
+    # 显示日期汇总（按目标月份分组）
+    all_account_ranges = [range_info] if range_info else []
+    show_summary(all_account_ranges, target_year_month)
 
     # 输出汇总
     print()

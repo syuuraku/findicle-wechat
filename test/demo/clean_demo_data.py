@@ -5,7 +5,7 @@
     python clean_demo_data.py
 
 说明:
-    删除 demo_account.json 和 demo_article.json（如果存在）
+    删除 demo_account.json、demo_article.json 和 demo_filter_result.json（如果存在）
 """
 
 import os
@@ -15,6 +15,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FILES_TO_CLEAN = [
     os.path.join(SCRIPT_DIR, "demo_account.json"),
     os.path.join(SCRIPT_DIR, "demo_article.json"),
+    os.path.join(SCRIPT_DIR, "demo_filter_result.json"),
 ]
 
 
