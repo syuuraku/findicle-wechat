@@ -1,22 +1,11 @@
 import requests
 import utils
+import storage
 from bs4 import BeautifulSoup
 import time
 import random
 import json
-import os
 from config import DEEPSEEK_API_KEY
-
-current_headers = utils.get_headers()
-
-ARTICLES_FILE = "articles.json"
-
-def load_articles():
-    """从本地 JSON 文件加载已有文章列表"""
-    if os.path.exists(ARTICLES_FILE):
-        with open(ARTICLES_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
 
 
 def get_articles_by_date(start_date, end_date):
@@ -29,22 +18,10 @@ def get_articles_by_date(start_date, end_date):
     Returns:
         符合日期区间的文章列表（闭区间 [start_date, end_date]）
     """
-    articles = load_articles()
+    articles = storage.load_articles()
     filtered = [a for a in articles if start_date <= a['date'] <= end_date]
     print(f"从本地 {len(articles)} 篇文章中筛选出 {len(filtered)} 篇（{start_date} ~ {end_date}）")
     return filtered
-
-
-# 从本地文件按日期区间获取文章列表（不触发爬取）
-print()
-print("=" * 60)
-print("开始日期筛选")
-print("=" * 60)
-print()
-
-start_date = "2026-04-01"
-end_date = "2026-04-30"
-dated_articles = get_articles_by_date(start_date, end_date)
 
 
 def extract_article_text(url, headers):
@@ -122,61 +99,85 @@ def judge_foreign_affairs(title, text):
         return None
 
 
-# ========== 主流程：筛选外事文章 ==========
-foreign_affairs_articles = []
-print()
-print("=" * 60)
-print("开始主题筛选")
-print("=" * 60)
+def main():
+    """主流程：日期筛选 → 正文提取 → AI 主题分类 → 输出结果"""
 
-print(f"\n共 {len(dated_articles)} 篇文章待筛选\n")
-
-for i, article in enumerate(dated_articles):
-    title = article['title']
-    url = article['url']
-    account = article['account']
-    date = article['date']
-
-    print(f"[{i+1}/{len(dated_articles)}] 正在处理: {title}")
-
-    # 第一步：抓取文章正文
-    text = extract_article_text(url, current_headers)
-    if not text:
-        print(f"  ⏭️ 跳过（无法提取正文）\n")
-        continue
-
-    # 第二步：AI 判断主题
-    result = judge_foreign_affairs(title, text)
-
-    if result and result.get('is_foreign_affairs'):
-        foreign_affairs_articles.append({
-            'title': title,
-            'account': account,
-            'date': date,
-            'url': url
-        })
-        print(f"  ✅ 外事相关 - {result.get('reason', '')}")
-    elif result:
-        print(f"  ❌ 非外事 - {result.get('reason', '')}")
-    else:
-        print(f"  ⏭️ 跳过（AI 判断失败）")
-
-    # 请求间隔，模拟人类阅读行为，避免被限流
-    time.sleep(random.uniform(1.5, 4.0))
+    # ========== 日期筛选 ==========
+    print()
+    print("=" * 60)
+    print("开始日期筛选")
+    print("=" * 60)
     print()
 
-# ========== 输出结果 ==========
-print("=" * 60)
-print(f"筛选完成！共 {len(foreign_affairs_articles)} 篇外事相关文章：")
-print("=" * 60)
+    start_date = input("请输入起始日期（格式 YYYY-MM-DD，如 2026-04-01）：").strip()
+    end_date = input("请输入结束日期（格式 YYYY-MM-DD，如 2026-04-30）：").strip()
 
-for article in foreign_affairs_articles:
-    print(f"  [{article['date']}] {article['account']}")
-    print(f"  {article['title']}")
-    # print(f"  {article['url']}")
+    dated_articles = get_articles_by_date(start_date, end_date)
+
+    if not dated_articles:
+        print("\n日期区间内无文章，流程结束。")
+        return
+
+    # ========== 主题筛选 ==========
+    current_headers = utils.get_headers()
+    foreign_affairs_articles = []
+
     print()
+    print("=" * 60)
+    print("开始主题筛选")
+    print("=" * 60)
 
-# 保存筛选结果到本地临时文件（"w" 模式会先清空再写入，已被 .gitignore 忽略）
-with open("filter_result.json", "w", encoding="utf-8") as f:
-    json.dump(foreign_affairs_articles, f, ensure_ascii=False, indent=2)
-print(f"结果已保存到 filter_result.json（共 {len(foreign_affairs_articles)} 篇）")
+    print(f"\n共 {len(dated_articles)} 篇文章待筛选\n")
+
+    for i, article in enumerate(dated_articles):
+        title = article['title']
+        url = article['url']
+        account = article['account']
+        date = article['date']
+
+        print(f"[{i+1}/{len(dated_articles)}] 正在处理: {title}")
+
+        # 第一步：抓取文章正文
+        text = extract_article_text(url, current_headers)
+        if not text:
+            print(f"  ⏭️ 跳过（无法提取正文）\n")
+            continue
+
+        # 第二步：AI 判断主题
+        result = judge_foreign_affairs(title, text)
+
+        if result and result.get('is_foreign_affairs'):
+            foreign_affairs_articles.append({
+                'title': title,
+                'account': account,
+                'date': date,
+                'url': url
+            })
+            print(f"  ✅ 外事相关 - {result.get('reason', '')}")
+        elif result:
+            print(f"  ❌ 非外事 - {result.get('reason', '')}")
+        else:
+            print(f"  ⏭️ 跳过（AI 判断失败）")
+
+        # 请求间隔，模拟人类阅读行为，避免被限流
+        time.sleep(random.uniform(1.5, 4.0))
+        print()
+
+    # ========== 输出结果 ==========
+    print("=" * 60)
+    print(f"筛选完成！共 {len(foreign_affairs_articles)} 篇外事相关文章：")
+    print("=" * 60)
+
+    for article in foreign_affairs_articles:
+        print(f"  [{article['date']}] {article['account']}")
+        print(f"  {article['title']}")
+        # print(f"  {article['url']}")
+        print()
+
+    # 保存筛选结果到本地临时文件（已被 .gitignore 忽略）
+    storage.save_filter_result(foreign_affairs_articles)
+    print(f"结果已保存到 data/filter_result.json（共 {len(foreign_affairs_articles)} 篇）")
+
+
+if __name__ == "__main__":
+    main()

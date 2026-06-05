@@ -1,43 +1,24 @@
 import requests
 import utils
-import json
-import os
+import storage
 
-URLS_FILE = "urls.txt"
-ACCOUNTS_FILE = "accounts.json"
-
-def load_accounts():
-    """从本地 JSON 文件加载已有公众号列表"""
-    if os.path.exists(ACCOUNTS_FILE):
-        with open(ACCOUNTS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return []
-
-def save_accounts(accounts):
-    """将公众号列表保存到本地 JSON 文件"""
-    with open(ACCOUNTS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(accounts, f, ensure_ascii=False, indent=2)
 
 def fetch_fakeids():
+    """读取本地URL获取公众号fakeid，更新到 accounts.json，并返回完整公众号列表"""
+
     print("=" * 60)
     print(" " * 20 + "开始检查公众号库")
     print("=" * 60)
     print()
-    """读取本地URL获取公众号fakeid，更新到 accounts.json，并返回完整公众号列表"""
+
     # 1. 加载本地已有库
-    account_list = load_accounts()
+    account_list = storage.load_accounts()
     existing_fakeids = {acc['fakeid'] for acc in account_list}
     print(f"从本地加载了 {len(account_list)} 个公众号信息")
     print() 
     
     # 2. 读取 urls.txt
-    urls = []
-    if os.path.exists(URLS_FILE):
-        with open(URLS_FILE, 'r', encoding='utf-8') as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith('#'):
-                    urls.append(line)
+    urls = storage.load_urls()
     
     if not urls:
         print("未在 urls.txt 中发现有效的待解析链接。")
@@ -72,7 +53,7 @@ def fetch_fakeids():
 
     # 4. 如果有新增则保存
     if new_count > 0:
-        save_accounts(account_list)
+        storage.save_accounts(account_list)
         print(f"\n本次新增 {new_count} 个公众号，库中总计 {len(account_list)} 个公众号已保存。")
     else:
         print("\n本次没有新增公众号。")
@@ -82,4 +63,3 @@ def fetch_fakeids():
 
 if __name__ == "__main__":
     fetch_fakeids()
-

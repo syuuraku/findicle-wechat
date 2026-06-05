@@ -1,30 +1,8 @@
 import requests
 import utils
-import json
-import os
+import storage
 from datetime import datetime
-import get_fakeid
 import date_range
-
-# 持久化文件路径
-ARTICLES_FILE = "articles.json"
-
-
-def load_articles():
-    """从本地 JSON 文件加载已有文章列表"""
-    if os.path.exists(ARTICLES_FILE):
-        with open(ARTICLES_FILE, 'r', encoding='utf-8') as f:
-            content = f.read().strip()
-            if not content:
-                return []
-            return json.loads(content)
-    return []
-
-
-def save_articles(articles):
-    """将文章列表保存到本地 JSON 文件"""
-    with open(ARTICLES_FILE, 'w', encoding='utf-8') as f:
-        json.dump(articles, f, ensure_ascii=False, indent=2)
 
 
 def fetch_articles():
@@ -32,7 +10,7 @@ def fetch_articles():
     """获取所有公众号的文章列表，与历史数据合并后存入 all_articles 并持久化"""
 
     # 1. 加载历史数据
-    all_articles = load_articles()
+    all_articles = storage.load_articles()
     old_count = len(all_articles)
     print()
     print(f"从本地加载了 {old_count} 篇历史文章")
@@ -43,10 +21,10 @@ def fetch_articles():
 
     # 3. 获取请求头和公众号列表
     current_headers = utils.get_headers()
-    account_list = get_fakeid.load_accounts()
+    account_list = storage.load_accounts()
     
     if not account_list:
-        print("未获取到任何公众号信息，请检查 urls.txt 或 accounts.json")
+        print("未获取到任何公众号信息，请检查 data/urls.txt 或 data/accounts.json")
         return all_articles
 
     # 4. 输入目标月份（用于最终汇总分组）
@@ -118,7 +96,7 @@ def fetch_articles():
     all_articles.sort(key=lambda x: (x['account'], x['date']))
 
     # 7. 持久化保存
-    save_articles(all_articles)
+    storage.save_articles(all_articles)
 
     # 8. 显示全部公众号日期汇总
     date_range.show_summary(all_account_ranges, target_year_month)

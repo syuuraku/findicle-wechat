@@ -1,5 +1,6 @@
 __pycache__/
-worktree/
-*.json
-*.txt
 config.py
+.claude/
+data/
+demos/
+log.txt
