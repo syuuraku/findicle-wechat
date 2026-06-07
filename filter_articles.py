@@ -24,10 +24,12 @@ def get_articles_by_date(start_date, end_date):
     return filtered
 
 
-def extract_article_text(url, headers):
-    """抓取微信文章页面，提取正文纯文本（前800字）"""
+def extract_article_text(url):
+    """直接请求微信文章页面，提取正文纯文本（前800字）"""
     try:
-        response = requests.get(f'https://down.mptext.top/api/public/v1/download?url={url}', headers=headers, timeout=15)
+        headers = utils.get_wechat_headers()
+        session = requests.Session()
+        response = session.get(url, headers=headers, timeout=15)
         response.encoding = 'utf-8'
 
         if response.status_code != 200:
@@ -119,7 +121,6 @@ def main():
         return
 
     # ========== 主题筛选 ==========
-    current_headers = utils.get_headers()
     foreign_affairs_articles = []
 
     print()
@@ -138,7 +139,7 @@ def main():
         print(f"[{i+1}/{len(dated_articles)}] 正在处理: {title}")
 
         # 第一步：抓取文章正文
-        text = extract_article_text(url, current_headers)
+        text = extract_article_text(url)
         if not text:
             print(f"  ⏭️ 跳过（无法提取正文）\n")
             continue
