@@ -5,8 +5,76 @@ from bs4 import BeautifulSoup
 import time
 import random
 import json
+import os
+import yaml
 from config import DEEPSEEK_API_KEY
 
+# ========== 主题配置相关 ==========
+
+TOPICS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "topics")
+
+
+def list_topics():
+    """列出 topics/ 目录下所有可用的主题配置文件
+
+    Returns:
+        [(文件路径, 主题名称), ...] 的列表
+    """
+    topics = []
+    if not os.path.exists(TOPICS_DIR):
+        return topics
+
+    for filename in sorted(os.listdir(TOPICS_DIR)):
+        if filename.endswith('.yaml') or filename.endswith('.yml'):
+            filepath = os.path.join(TOPICS_DIR, filename)
+            topic = load_topic(filepath)
+            topics.append((filepath, topic['name'], filename))
+    return topics
+
+
+def load_topic(topic_file):
+    """加载 YAML 主题配置文件
+
+    Args:
+        topic_file: YAML 文件路径
+
+    Returns:
+        {'name': '主题名', 'categories': ['类别1', '类别2', ...]}
+    """
+    with open(topic_file, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f)
+
+
+def select_topic():
+    """交互式菜单：让用户选择一个主题配置
+
+    Returns:
+        加载后的主题字典 {'name': ..., 'categories': [...]}
+    """
+    topics = list_topics()
+
+    if not topics:
+        print("⚠️ topics/ 目录下没有找到任何主题配置文件（.yaml）。")
+        print("请参考 README.md 创建主题配置。")
+        return None
+
+    print("请选择筛选主题：")
+    print()
+    for i, (filepath, name, filename) in enumerate(topics):
+        print(f"  {i + 1}. {name} ({filename})")
+    print()
+
+    while True:
+        choice = input(f"请输入编号（1-{len(topics)}）：").strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(topics):
+            selected = topics[int(choice) - 1]
+            topic = load_topic(selected[0])
+            print(f"\n已选择主题：{topic['name']}")
+            return topic
+        print(f"  ⚠️ 无效输入，请输入 1 到 {len(topics)} 之间的数字。")
+
+
+# ========== 日期筛选 ==========
 
 def get_articles_by_date(start_date, end_date):
     """根据日期区间从本地文件提取文章（不触发爬取）
@@ -23,6 +91,8 @@ def get_articles_by_date(start_date, end_date):
     print(f"从本地 {len(articles)} 篇文章中筛选出 {len(filtered)} 篇（{start_date} ~ {end_date}）")
     return filtered
 
+
+# ========== 正文提取 ==========
 
 def extract_article_text(url):
     """直接请求微信文章页面，提取正文纯文本（前800字）"""
@@ -51,15 +121,24 @@ def extract_article_text(url):
         return None
 
 
-def judge_foreign_affairs(title, text):
-    """调用 DeepSeek API 判断文章是否属于外事主题，返回 JSON 结果"""
-    prompt = f"""请判断以下文章是否属于"外事"主题。外事主题包括但不限于：
-- 国外学校/机构来访或出访
-- 与国外学者的学术合作与交流
-- 在国际顶尖期刊或会议上发表论文
-- 港澳台地区的学术交流与合作
-- 国际学术会议参会或举办
-- 国际项目合作、联合培养
+# ========== AI 主题分类 ==========
+
+def build_prompt(topic, title, text):
+    """根据主题配置动态构建分类 prompt
+
+    Args:
+        topic: 主题字典 {'name': ..., 'categories': [...]}
+        title: 文章标题
+        text:  文章正文（前800字）
+
+    Returns:
+        构建好的 prompt 字符串
+    """
+    topic_name = topic['name']
+    categories_text = "\n".join(f"- {c}" for c in topic['categories'])
+
+    return f"""请判断以下文章是否属于"{topic_name}"主题。{topic_name}主题包括但不限于：
+{categories_text}
 
 文章标题：{title}
 
@@ -67,7 +146,21 @@ def judge_foreign_affairs(title, text):
 {text}
 
 请只返回以下JSON格式，不要输出其他内容：
-{{"is_foreign_affairs": true/false, "reason": "简要原因"}}"""
+{{"is_match": true/false, "reason": "简要原因"}}"""
+
+
+def classify_article(topic, title, text):
+    """调用 DeepSeek API 判断文章是否匹配指定主题
+
+    Args:
+        topic: 主题字典 {'name': ..., 'categories': [...]}
+        title: 文章标题
+        text:  文章正文（前800字）
+
+    Returns:
+        {'is_match': True/False, 'reason': '...'} 或 None（失败时）
+    """
+    prompt = build_prompt(topic, title, text)
 
     try:
         response = requests.post(
@@ -101,8 +194,23 @@ def judge_foreign_affairs(title, text):
         return None
 
 
+# ========== 主流程 ==========
+
 def main():
-    """主流程：日期筛选 → 正文提取 → AI 主题分类 → 输出结果"""
+    """主流程：主题选择 → 日期筛选 → 正文提取 → AI 主题分类 → 输出结果"""
+
+    # ========== 主题选择 ==========
+    print()
+    print("=" * 60)
+    print("选择筛选主题")
+    print("=" * 60)
+    print()
+
+    topic = select_topic()
+    if not topic:
+        return
+
+    topic_name = topic['name']
 
     # ========== 日期筛选 ==========
     print()
@@ -121,11 +229,11 @@ def main():
         return
 
     # ========== 主题筛选 ==========
-    foreign_affairs_articles = []
+    matched_articles = []
 
     print()
     print("=" * 60)
-    print("开始主题筛选")
+    print(f"开始主题筛选（{topic_name}）")
     print("=" * 60)
 
     print(f"\n共 {len(dated_articles)} 篇文章待筛选\n")
@@ -145,18 +253,18 @@ def main():
             continue
 
         # 第二步：AI 判断主题
-        result = judge_foreign_affairs(title, text)
+        result = classify_article(topic, title, text)
 
-        if result and result.get('is_foreign_affairs'):
-            foreign_affairs_articles.append({
+        if result and result.get('is_match'):
+            matched_articles.append({
                 'title': title,
                 'account': account,
                 'date': date,
                 'url': url
             })
-            print(f"  ✅ 外事相关 - {result.get('reason', '')}")
+            print(f"  ✅ {topic_name}相关 - {result.get('reason', '')}")
         elif result:
-            print(f"  ❌ 非外事 - {result.get('reason', '')}")
+            print(f"  ❌ 非{topic_name} - {result.get('reason', '')}")
         else:
             print(f"  ⏭️ 跳过（AI 判断失败）")
 
@@ -166,18 +274,18 @@ def main():
 
     # ========== 输出结果 ==========
     print("=" * 60)
-    print(f"筛选完成！共 {len(foreign_affairs_articles)} 篇外事相关文章：")
+    print(f"筛选完成！共 {len(matched_articles)} 篇{topic_name}相关文章：")
     print("=" * 60)
 
-    for article in foreign_affairs_articles:
+    for article in matched_articles:
         print(f"  [{article['date']}] {article['account']}")
         print(f"  {article['title']}")
         # print(f"  {article['url']}")
         print()
 
     # 保存筛选结果到本地临时文件（已被 .gitignore 忽略）
-    storage.save_filter_result(foreign_affairs_articles)
-    print(f"结果已保存到 data/filter_result.json（共 {len(foreign_affairs_articles)} 篇）")
+    storage.save_filter_result(matched_articles)
+    print(f"结果已保存到 data/filter_result.json（共 {len(matched_articles)} 篇）")
 
 
 if __name__ == "__main__":
