@@ -89,6 +89,14 @@ def get_articles_by_date(start_date, end_date):
     articles = storage.load_articles()
     filtered = [a for a in articles if start_date <= a['date'] <= end_date]
     print(f"从本地 {len(articles)} 篇文章中筛选出 {len(filtered)} 篇（{start_date} ~ {end_date}）")
+
+    # 保存待筛选文章列表到 data/filter/，文件名为日期区间
+    os.makedirs(storage.FILTER_DIR, exist_ok=True)
+    dated_file = os.path.join(storage.FILTER_DIR, f"{start_date}_{end_date}.json")
+    with open(dated_file, 'w', encoding='utf-8') as f:
+        json.dump(filtered, f, ensure_ascii=False, indent=2)
+    print(f"待筛选文章已保存到 {dated_file}")
+
     return filtered
 
 
@@ -276,7 +284,8 @@ def main():
                 'title': title,
                 'account': account,
                 'date': date,
-                'url': url
+                'url': url,
+                'reason': result.get('reason', '')
             })
             print(f"  ✅ {topic_name}相关 - {result.get('reason', '')}")
         elif result:
@@ -302,6 +311,10 @@ def main():
     # 保存筛选结果到本地临时文件（已被 .gitignore 忽略）
     storage.save_filter_result(matched_articles)
     print(f"结果已保存到 data/filter_result.json（共 {len(matched_articles)} 篇）")
+
+    # 导出 Excel
+    import view_results
+    view_results.export_to_excel(matched_articles, topic_name)
 
 
 if __name__ == "__main__":

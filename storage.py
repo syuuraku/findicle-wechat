@@ -14,6 +14,7 @@ ACCOUNTS_FILE = os.path.join(DATA_DIR, "accounts.json")
 ARTICLES_FILE = os.path.join(DATA_DIR, "articles.json")
 URLS_FILE = os.path.join(DATA_DIR, "urls.txt")
 FILTER_RESULT_FILE = os.path.join(DATA_DIR, "filter_result.json")
+FILTER_DIR = os.path.join(DATA_DIR, "filter")
 
 
 def _ensure_data_dir():
