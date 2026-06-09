@@ -127,7 +127,7 @@ def build_prompt(topic, title, text):
     """根据主题配置动态构建分类 prompt
 
     Args:
-        topic: 主题字典 {'name': ..., 'categories': [...]}
+        topic: 主题字典 {'name': ..., 'categories': [...], 'exclusions': [...], 'guidelines': [...]}
         title: 文章标题
         text:  文章正文（前800字）
 
@@ -137,8 +137,22 @@ def build_prompt(topic, title, text):
     topic_name = topic['name']
     categories_text = "\n".join(f"- {c}" for c in topic['categories'])
 
-    return f"""请判断以下文章是否属于"{topic_name}"主题。{topic_name}主题包括但不限于：
-{categories_text}
+    principle = topic.get('principle', '')
+    principle_line = f"\n{principle}\n" if principle else ""
+
+    prompt = f"""请判断以下文章是否属于"{topic_name}"主题。
+{principle_line}
+符合"{topic_name}"的类别：
+{categories_text}"""
+
+    if 'exclusions' in topic:
+        exclusions_text = "\n".join(f"- {e}" for e in topic['exclusions'])
+        prompt += f"""
+
+以下情况不属于"{topic_name}"（即使表面上涉及国际元素，也应判断为不符合）：
+{exclusions_text}"""
+
+    prompt += f"""
 
 文章标题：{title}
 
@@ -147,6 +161,8 @@ def build_prompt(topic, title, text):
 
 请只返回以下JSON格式，不要输出其他内容：
 {{"is_match": true/false, "reason": "简要原因"}}"""
+
+    return prompt
 
 
 def classify_article(topic, title, text):
