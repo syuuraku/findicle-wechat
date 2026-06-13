@@ -177,49 +177,77 @@ def build_prompt(topic, title, text):
     return prompt
 
 
-def classify_article(topic, title, text):
+def classify_article(topic, title, text, max_retries=3):
     """调用 DeepSeek API 判断文章是否匹配指定主题
+
+    对 429 / 5xx / 超时等瞬时错误做指数退避重试（最多 max_retries 次，
+    1s→2s→4s）；4xx（除 429）、JSON 解析失败等永久错误直接返回 None。
 
     Args:
         topic: 主题字典 {'name': ..., 'categories': [...]}
         title: 文章标题
         text:  文章正文（前800字）
+        max_retries: 瞬时错误的最大重试次数
 
     Returns:
-        {'is_match': True/False, 'reason': '...'} 或 None（失败时）
+        {'is_match': True/False, 'reason': '...'}；
+        None 表示硬失败（重试用尽或永久错误），上层据此记入待复核
     """
     prompt = build_prompt(topic, title, text)
 
-    try:
-        response = requests.post(
-            "https://api.deepseek.com/chat/completions",
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
-            },
-            json={
-                "model": "deepseek-chat",
-                "messages": [
-                    {"role": "system", "content": "你是一个文章主题分类助手，只返回JSON格式的判断结果。"},
-                    {"role": "user", "content": prompt}
-                ],
-                "response_format": {"type": "json_object"}, # <--- 开启 JSON 模式
-                "temperature": 0.3
-            },
-            timeout=30
-        )
+    for attempt in range(max_retries):
+        # 仅当后面还有重试机会时才退避等待，最后一次失败不再空等
+        def backoff(note):
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt  # 1s, 2s, 4s
+                print(f"  ⚠️ {note}，{wait}s 后重试（{attempt + 1}/{max_retries}）：{title}")
+                time.sleep(wait)
 
-        if response.status_code != 200:
-            print(f"  ⚠️ DeepSeek API 错误，状态码: {response.status_code}")
+        try:
+            response = requests.post(
+                "https://api.deepseek.com/chat/completions",
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {DEEPSEEK_API_KEY}"
+                },
+                json={
+                    "model": "deepseek-chat",
+                    "messages": [
+                        {"role": "system", "content": "你是一个文章主题分类助手，只返回JSON格式的判断结果。"},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "response_format": {"type": "json_object"}, # <--- 开启 JSON 模式
+                    "temperature": 0.3
+                },
+                timeout=30
+            )
+
+            # 限速 / 服务端错误：可恢复，退避后重试
+            if response.status_code == 429 or response.status_code >= 500:
+                backoff(f"DeepSeek 暂时不可用（{response.status_code}）")
+                continue
+
+            # 其余非 200（如 400/401/402）：永久错误，重试无意义
+            if response.status_code != 200:
+                print(f"  ⚠️ DeepSeek API 错误，状态码: {response.status_code}（不重试）：{title}")
+                return None
+
+            result_text = response.json()['choices'][0]['message']['content'].strip()
+            return json.loads(result_text)
+
+        except (requests.Timeout, requests.ConnectionError) as e:
+            # 网络抖动 / 超时：可恢复，退避后重试
+            backoff(f"网络异常（{e}）")
+            continue
+
+        except Exception as e:
+            # JSON 解析失败等：内容有问题，重试通常无用，直接判失败
+            print(f"  ⚠️ AI 判断异常: {e}（不重试）：{title}")
             return None
 
-        result_text = response.json()['choices'][0]['message']['content'].strip()
-        result = json.loads(result_text)
-        return result
-
-    except Exception as e:
-        print(f"  ⚠️ AI 判断异常: {e}")
-        return None
+    # 重试用尽仍未拿到结果，判为硬失败
+    print(f"  ⚠️ 重试 {max_retries} 次仍失败：{title}")
+    return None
 
 
 # ========== 主流程 ==========
@@ -264,6 +292,7 @@ def main():
 
     # ========== 主题筛选 ==========
     matched_articles = []
+    undetermined = []  # API 硬失败（重试用尽）的文章，单独导出供复核，绝不静默丢弃
 
     print()
     print("=" * 60)
@@ -316,7 +345,15 @@ def main():
             elif result:
                 print(f"  ❌ {title}\n     非{topic_name} - {result.get('reason', '')}")
             else:
-                print(f"  ⏭️ {title}\n     跳过（AI 判断失败）")
+                # AI 没能判断（API 硬失败）≠ 不匹配：记入待复核，不丢弃
+                undetermined.append({
+                    'title': title,
+                    'account': article['account'],
+                    'date': article['date'],
+                    'url': article['url'],
+                    'reason': 'API 请求失败（重试用尽），未判断'
+                })
+                print(f"  ⚠️ {title}\n     未判断（API 请求失败）→ 已记入待复核")
 
     # ========== 输出结果 ==========
     print("=" * 60)
@@ -336,6 +373,19 @@ def main():
     # 导出 Excel
     import view_results
     view_results.export_to_excel(matched_articles, topic_name)
+
+    # 未判断（API 硬失败）文章：单独导出，供复核 / 重跑，避免需要的文章被静默丢弃
+    if undetermined:
+        undetermined_file = os.path.join(
+            storage.FILTER_DIR, f"{start_date}_{end_date}_undetermined.xlsx"
+        )
+        view_results.export_to_excel(
+            undetermined, f"{topic_name}-未判断", output_file=undetermined_file
+        )
+        print()
+        print(f"⚠️ 有 {len(undetermined)} 篇因 API 请求失败未能判断，已存到：")
+        print(f"   {undetermined_file}")
+        print("   这些文章可能包含你需要的内容，建议复核，或稍后重跑这一批补救。")
 
 
 if __name__ == "__main__":

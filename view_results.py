@@ -33,12 +33,14 @@ COLUMNS = [
 ]
 
 
-def export_to_excel(articles, topic_name=""):
+def export_to_excel(articles, topic_name="", output_file=None):
     """将筛选结果导出为格式化的 Excel 文件
 
     Args:
         articles: 筛选后的文章列表，每项包含 title, account, date, url, reason
         topic_name: 主题名称，用于 sheet 标题
+        output_file: 输出路径；默认写到 EXCEL_OUTPUT_FILE，
+                     传入则写到指定路径（如待复核文件 data/filter/<区间>_undetermined.xlsx）
 
     Returns:
         生成的 Excel 文件绝对路径
@@ -126,11 +128,12 @@ def export_to_excel(articles, topic_name=""):
     ws.freeze_panes = "A2"
 
     # ===== 保存文件 =====
-    storage._ensure_data_dir()
-    wb.save(EXCEL_OUTPUT_FILE)
+    out_file = output_file or EXCEL_OUTPUT_FILE
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)
+    wb.save(out_file)
 
-    print(f"📊 Excel 已生成：{EXCEL_OUTPUT_FILE}")
-    return EXCEL_OUTPUT_FILE
+    print(f"📊 Excel 已生成：{out_file}")
+    return out_file
 
 
 def main():
