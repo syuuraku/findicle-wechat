@@ -7,7 +7,11 @@ import random
 import json
 import os
 import yaml
+from concurrent.futures import ThreadPoolExecutor
 from config import DEEPSEEK_API_KEY
+
+# DeepSeek 分类并发数（微信抓取仍单线程串行防封，仅 AI 判断并行）
+CLASSIFY_WORKERS = 4
 
 # ========== 主题配置相关 ==========
 
@@ -246,7 +250,13 @@ def main():
     start_date = input("请输入起始日期（格式 YYYY-MM-DD，如 2026-04-01）：").strip()
     end_date = input("请输入结束日期（格式 YYYY-MM-DD，如 2026-04-30）：").strip()
 
-    dated_articles = get_articles_by_date(start_date, end_date)
+    dated_file = os.path.join(storage.FILTER_DIR, f"{start_date}_{end_date}.json")
+    if os.path.exists(dated_file):
+        with open(dated_file, 'r', encoding='utf-8') as f:
+            dated_articles = json.load(f)
+        print(f"已找到缓存文件 {dated_file}，直接加载 {len(dated_articles)} 篇文章")
+    else:
+        dated_articles = get_articles_by_date(start_date, end_date)
 
     if not dated_articles:
         print("\n日期区间内无文章，流程结束。")
@@ -260,42 +270,53 @@ def main():
     print(f"开始主题筛选（{topic_name}）")
     print("=" * 60)
 
-    print(f"\n共 {len(dated_articles)} 篇文章待筛选\n")
+    total = len(dated_articles)
+    print(f"\n共 {total} 篇文章待筛选\n")
 
-    for i, article in enumerate(dated_articles):
-        title = article['title']
-        url = article['url']
-        account = article['account']
-        date = article['date']
+    # 抓取（单线程串行 + 间隔，防封）与 AI 分类（线程池并行）流水线：
+    # 主线程逐篇抓正文，抓到一篇就把分类任务丢进线程池后台并行跑，
+    # 这样 AI 判断耗时被抓取间隔覆盖掉，总耗时基本只剩「抓取 + 间隔」一条线。
+    classify_jobs = []  # [(article, future), ...] 按文章顺序保存
 
-        print(f"[{i+1}/{len(dated_articles)}] 正在处理: {title}")
+    with ThreadPoolExecutor(max_workers=CLASSIFY_WORKERS) as executor:
+        for i, article in enumerate(dated_articles):
+            title = article['title']
+            url = article['url']
 
-        # 第一步：抓取文章正文
-        text = extract_article_text(url)
-        if not text:
-            print(f"  ⏭️ 跳过（无法提取正文）\n")
-            continue
+            print(f"[{i+1}/{total}] 抓取正文: {title}")
 
-        # 第二步：AI 判断主题
-        result = classify_article(topic, title, text)
+            # 第一步：抓取文章正文（串行，限流只针对微信）
+            text = extract_article_text(url)
+            if not text:
+                print(f"  ⏭️ 跳过（无法提取正文）")
+            else:
+                # 第二步：提交 AI 分类任务到线程池并行执行（不阻塞抓取）
+                future = executor.submit(classify_article, topic, title, text)
+                classify_jobs.append((article, future))
 
-        if result and result.get('is_match'):
-            matched_articles.append({
-                'title': title,
-                'account': account,
-                'date': date,
-                'url': url,
-                'reason': result.get('reason', '')
-            })
-            print(f"  ✅ {topic_name}相关 - {result.get('reason', '')}")
-        elif result:
-            print(f"  ❌ 非{topic_name} - {result.get('reason', '')}")
-        else:
-            print(f"  ⏭️ 跳过（AI 判断失败）")
+            # 抓取间隔：只绑定微信抓取，DeepSeek 调用后不睡；最后一篇无需再等
+            if i < total - 1:
+                time.sleep(random.uniform(1.0, 2.0))
 
-        # 请求间隔，模拟人类阅读行为，避免被限流
-        time.sleep(random.uniform(1.5, 4.0))
-        print()
+        # 抓取全部完成，按文章顺序收集 AI 分类结果（多数已在后台跑完）
+        print(f"\n抓取完成，等待 AI 分类结果...\n")
+        for article, future in classify_jobs:
+            title = article['title']
+            result = future.result()
+
+            if result and result.get('is_match'):
+                matched_articles.append({
+                    'title': title,
+                    'account': article['account'],
+                    'date': article['date'],
+                    'url': article['url'],
+                    'reason': result.get('reason', '')
+                })
+                print(f"  ✅ {title}\n     {topic_name}相关 - {result.get('reason', '')}")
+            elif result:
+                print(f"  ❌ {title}\n     非{topic_name} - {result.get('reason', '')}")
+            else:
+                print(f"  ⏭️ {title}\n     跳过（AI 判断失败）")
 
     # ========== 输出结果 ==========
     print("=" * 60)
