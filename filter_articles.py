@@ -284,11 +284,9 @@ def save_to_local(articles, topic_name):
 
 
 def export_to_notion(articles, topic_name):
-    """将筛选结果传入 Notion（具体实现待补充，当前仅占位）"""
-    # TODO: 接入 Notion API，将 articles 写入指定数据库
-    print()
-    print(f"📤 已选择「传入 Notion」（共 {len(articles)} 篇）。")
-    print("   ⚠️ Notion 导入功能尚未实现，此处仅占位。")
+    """将筛选结果写入 Notion 数据库「院系外事收集」（见 notion_sync 模块）"""
+    import notion_sync
+    notion_sync.push_to_notion(articles, topic_name)
 
 
 # ========== 主流程 ==========
