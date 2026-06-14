@@ -250,6 +250,47 @@ def classify_article(topic, title, text, max_retries=3):
     return None
 
 
+# ========== 结果去向（筛选完成后由用户选择） ==========
+
+def select_output_destination():
+    """交互式菜单：让用户选择筛选结果的去向
+
+    Returns:
+        'notion'：传入 Notion；'local'：存入本地 JSON + Excel
+    """
+    print()
+    print("请选择筛选结果的去向：")
+    print()
+    print("  1. 传入 Notion")
+    print("  2. 存入本地（data/filter_result.json 和 data/filter_result.xlsx）")
+    print()
+
+    while True:
+        choice = input("请输入编号（1-2）：").strip()
+        if choice == '1':
+            return 'notion'
+        if choice == '2':
+            return 'local'
+        print("  ⚠️ 无效输入，请输入 1 或 2。")
+
+
+def save_to_local(articles, topic_name):
+    """将筛选结果存入本地 data/filter_result.json 和 data/filter_result.xlsx"""
+    storage.save_filter_result(articles)
+    print(f"结果已保存到 data/filter_result.json（共 {len(articles)} 篇）")
+
+    import view_results
+    view_results.export_to_excel(articles, topic_name)
+
+
+def export_to_notion(articles, topic_name):
+    """将筛选结果传入 Notion（具体实现待补充，当前仅占位）"""
+    # TODO: 接入 Notion API，将 articles 写入指定数据库
+    print()
+    print(f"📤 已选择「传入 Notion」（共 {len(articles)} 篇）。")
+    print("   ⚠️ Notion 导入功能尚未实现，此处仅占位。")
+
+
 # ========== 主流程 ==========
 
 def main():
@@ -366,16 +407,17 @@ def main():
         # print(f"  {article['url']}")
         print()
 
-    # 保存筛选结果到本地临时文件（已被 .gitignore 忽略）
-    storage.save_filter_result(matched_articles)
-    print(f"结果已保存到 data/filter_result.json（共 {len(matched_articles)} 篇）")
+    # 由用户决定结果去向：传入 Notion，或存入本地 JSON + Excel
+    destination = select_output_destination()
+    if destination == 'notion':
+        export_to_notion(matched_articles, topic_name)
+    else:
+        save_to_local(matched_articles, topic_name)
 
-    # 导出 Excel
-    import view_results
-    view_results.export_to_excel(matched_articles, topic_name)
-
-    # 未判断（API 硬失败）文章：单独导出，供复核 / 重跑，避免需要的文章被静默丢弃
+    # 未判断（API 硬失败）文章：无论结果去向如何，始终单独导出到本地，
+    # 供复核 / 重跑，避免需要的文章被静默丢弃
     if undetermined:
+        import view_results
         undetermined_file = os.path.join(
             storage.FILTER_DIR, f"{start_date}_{end_date}_undetermined.xlsx"
         )
