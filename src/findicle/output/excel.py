@@ -5,8 +5,8 @@
 方便用户在 Excel/WPS 中查看、排序、筛选。
 
 使用方式：
-  1. 被 filter_articles.py 自动调用（筛选完成后）
-  2. 独立运行：python view_results.py（查看上次筛选结果）
+  1. 被 filter/pipeline.py 自动调用（筛选完成后）
+  2. 独立运行：python -m findicle.output.excel（查看上次筛选结果）
 """
 
 import os
@@ -15,7 +15,7 @@ import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-import storage
+from findicle.common import storage
 
 
 # Excel 输出路径
@@ -140,7 +140,7 @@ def main():
     """独立运行：读取上次的筛选结果并导出 Excel"""
     if not os.path.exists(storage.FILTER_RESULT_FILE):
         print("⚠️ 未找到筛选结果文件（data/filter_result.json）。")
-        print("请先运行 filter_articles.py 进行筛选。")
+        print("请先运行 filter/pipeline.py 进行筛选。")
         return
 
     with open(storage.FILTER_RESULT_FILE, "r", encoding="utf-8") as f:

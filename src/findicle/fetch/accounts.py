@@ -1,6 +1,5 @@
 import requests
-import utils
-import storage
+from findicle.common import utils, storage
 
 
 def fetch_fakeids():

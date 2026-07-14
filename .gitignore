@@ -1,6 +1,8 @@
 __pycache__/
-config.py
 .claude/
+
+.env
+
 data/
 demos/
 log.txt

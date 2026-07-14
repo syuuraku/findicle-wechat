@@ -1,8 +1,7 @@
 import requests
-import utils
-import storage
+from findicle.common import utils, storage
+from findicle.filter.choose_date import show_date_range, show_summary
 from datetime import datetime
-import date_range
 
 
 def fetch_articles():
@@ -77,7 +76,7 @@ def fetch_articles():
                 print(f"  [+] ({date}) {title} ")
 
             # 显示该公众号此次爬取的日期区间
-            date_range.show_date_range(current_nickname, account_new_articles)
+            show_date_range(current_nickname, account_new_articles)
 
             # 收集该公众号的日期区间信息用于最终汇总
             if account_new_articles:
@@ -99,7 +98,7 @@ def fetch_articles():
     storage.save_articles(all_articles)
 
     # 8. 显示全部公众号日期汇总
-    date_range.show_summary(all_account_ranges, target_year_month)
+    show_summary(all_account_ranges, target_year_month)
 
     print(f"\n本次新增 {new_count} 篇，总计 {len(all_articles)} 篇文章（已去重、已排序、已保存）")
     print()

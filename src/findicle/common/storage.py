@@ -7,8 +7,10 @@
 import json
 import os
 
+from findicle.common.config import PROJECT_ROOT
+
 # ========== 数据文件路径常量 ==========
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
 ACCOUNTS_FILE = os.path.join(DATA_DIR, "accounts.json")
 ARTICLES_FILE = os.path.join(DATA_DIR, "articles.json")
@@ -70,7 +72,6 @@ def save_articles(articles):
     _ensure_data_dir()
     with open(ARTICLES_FILE, 'w', encoding='utf-8') as f:
         json.dump(articles, f, ensure_ascii=False, indent=2)
-
 
 
 

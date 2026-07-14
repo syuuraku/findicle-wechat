@@ -8,7 +8,7 @@ Notion 同步模块
 使用前提（见 config.example.py）：
   1. 在 Notion 建一个 internal integration，拿到 token；
   2. 在目标数据库 ··· → Connections 里把该 integration 分享进去；
-  3. 在 config.py 填写 NOTION_TOKEN 与 NOTION_DATABASE_ID。
+  3. 在 .env 填写 NOTION_TOKEN 与 NOTION_DATABASE_ID。
 
 字段映射（院系外事收集）：
   标题(title) ← title，作者(text) ← account，日期(date) ← date，
@@ -18,7 +18,7 @@ Notion 同步模块
 
 import time
 import requests
-from config import NOTION_TOKEN, NOTION_DATABASE_ID
+from findicle.common.config import NOTION_TOKEN, NOTION_DATABASE_ID
 
 NOTION_API_URL = "https://api.notion.com/v1/pages"
 NOTION_VERSION = "2022-06-28"
@@ -107,10 +107,10 @@ def push_to_notion(articles, topic_name=""):
     """
     # 配置校验：缺 token / database id 直接提示，不硬闯
     if not NOTION_TOKEN or NOTION_TOKEN.startswith("YOUR_"):
-        print("⚠️ 未配置 NOTION_TOKEN（见 config.py / config.example.py），跳过 Notion 写入。")
+        print("⚠️ 未配置 NOTION_TOKEN（见 .env / .env.example），跳过 Notion 写入。")
         return (0, len(articles))
     if not NOTION_DATABASE_ID or NOTION_DATABASE_ID.startswith("YOUR_"):
-        print("⚠️ 未配置 NOTION_DATABASE_ID（见 config.py / config.example.py），跳过 Notion 写入。")
+        print("⚠️ 未配置 NOTION_DATABASE_ID（见 .env / .env.example），跳过 Notion 写入。")
         return (0, len(articles))
 
     total = len(articles)

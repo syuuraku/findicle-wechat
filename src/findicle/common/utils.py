@@ -1,5 +1,5 @@
 import random
-from config import X_AUTH_KEY
+from findicle.common.config import X_AUTH_KEY
 
 
 # 微信内置浏览器 User-Agent 列表（用于直接请求微信文章页面）
